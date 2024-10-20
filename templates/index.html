@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>日本の観光案内データベース</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        form {
+            margin-bottom: 20px;
+        }
+
+        input[type="text"] {
+            width: 70%;
+            padding: 10px;
+        }
+
+        input[type="submit"] {
+            padding: 10px 20px;
+        }
+
+        .card {
+            background-color: #f0f0f0;
+            border-radius: 5px;
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+
+        h3 {
+            margin-bottom: 5px;
+        }
+
+        pre {
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            margin: 0;
+        }
+
+        #loading {
+            display: none;
+            text-align: center;
+            margin-top: 20px;
+        }
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+</head>
+
+<body>
+    <h1>日本の観光案内データベース</h1>
+    <p>自然言語で観光地や都市に関する質問ができます。</p>
+    <form id="queryForm">
+        <input type="text" id="userInput" name="user_input" placeholder="質問を入力してください"
+            value="{{ user_input if user_input else '' }}">
+        <input type="submit" value="質問する">
+    </form>
+    <div id="loading">検索中...</div>
+    <div id="result"></div>
+
+    <script>
+        document.getElementById('queryForm').addEventListener('submit', function (e) {
+            e.preventDefault();
+            const userInput = document.getElementById('userInput').value;
+            const loadingDiv = document.getElementById('loading');
+            const resultDiv = document.getElementById('result');
+
+            loadingDiv.style.display = 'block';
+            resultDiv.innerHTML = '';
+
+            fetch('/query', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: 'user_input=' + encodeURIComponent(userInput)
+            })
+                .then(response => response.json())
+                .then(data => {
+                    loadingDiv.style.display = 'none';
+                    resultDiv.innerHTML = `
+                    <h3>SQLクエリ:</h3>
+                    <div class="card">
+                        <pre>${data.sql_query}</pre>
+                    </div>
+                    <h3>結果:</h3>
+                    <div class="card">
+                        <pre>${data.results}</pre>
+                    </div>
+                    <h3>説明:</h3>
+                    <div class="card">
+                        <div id="explanation"></div>
+                    </div>
+                `;
+                    document.getElementById('explanation').innerHTML = marked.parse(data.explanation);
+                })
+                .catch(error => {
+                    loadingDiv.style.display = 'none';
+                    resultDiv.innerHTML = '<p>エラーが発生しました。もう一度お試しください。</p>';
+                    console.error('Error:', error);
+                });
+        });
+    </script>
+</body>
+
+</html>
